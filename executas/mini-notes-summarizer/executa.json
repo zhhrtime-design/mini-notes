@@ -1,0 +1,6 @@
+{
+  "tool_id": "tool-test-mini-notes-summarizer-12345678",
+  "type": "go",
+  "enabled": true,
+  "_comment": "Local-dev launcher read by `anna-app dev` / `anna-app executa dev`: runs `go run .` in this directory (first launch compiles and caches). tool_id follows the dev placeholder pattern tool-test-<slug>-12345678, where <slug> == describe().name == manifest required_executas 'bundled:<slug>'. Published builds ship as the binary archives made by scripts/package_executa.py."
+}

@@ -1,0 +1,8 @@
+node_modules/
+bundle/
+dist-executa/
+.build/
+logs/
+.DS_Store
+*.log
+.tools/

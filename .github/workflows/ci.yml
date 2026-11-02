@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  executa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: go vet + go test -race
+        working-directory: executas/mini-notes-summarizer
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+      - name: Protocol test (reverse sampling, mock fixture)
+        run: node scripts/protocol-test.mjs
+      - name: Packaging dry run (host platform) + verify
+        run: python scripts/package_executa.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:consistency
+
+  # Verified locally with @anna-ai/cli 0.1.63 (schema 0.32.0). Pinned so a new CLI
+  # release cannot change the result silently; bump deliberately.
+  anna-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm run build
+      - run: npm install --no-save @anna-ai/cli@0.1.63
+      - run: npx anna-app validate --strict

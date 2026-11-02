@@ -1,0 +1,1 @@
+{"ns":"sampling","method":"createMessage","result":{"role":"assistant","content":{"type":"text","text":"[mock-sampling] Follow up with the client tomorrow, fix the login bug, and sketch ideas for the workshop."},"model":"mock-sampling-model","stopReason":"endTurn","usage":{"inputTokens":64,"outputTokens":24,"totalTokens":88}}}

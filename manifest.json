@@ -1,0 +1,48 @@
+{
+  "schema": 3,
+  "required_executas": [
+    {
+      "tool_id": "bundled:mini-notes-summarizer",
+      "min_version": "0.1.0",
+      "version": "latest"
+    }
+  ],
+  "optional_executas": [],
+  "permissions": ["storage.read", "storage.write"],
+  "system_prompt_addendum": "The user has the Mini Notes app open. Notes live in Anna app storage (anna.storage.get/set). The Summarize button calls the bundled mini-notes-summarizer Executa (method 'summarize'), which asks the host LLM to write the summary through reverse sampling/createMessage. You do not need to summon any windows.",
+  "tags": ["notes", "demo", "executa", "sampling"],
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html",
+      "external_origins": []
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "Mini Notes",
+        "default": true,
+        "entry": "index.html",
+        "min_size": { "w": 360, "h": 520 },
+        "default_size": { "w": 480, "h": 700 },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true
+      }
+    ],
+    "host_api": {
+      "tools": ["required:*"],
+      "storage": ["get", "set"],
+      "llm": ["complete"]
+    },
+    "csp_overrides": {
+      "script-src": ["'self'"]
+    },
+    "state_merge": "last_writer_wins"
+  },
+  "dev": {
+    "fixtures": [],
+    "seed_storage": {},
+    "user_id": 1
+  }
+}

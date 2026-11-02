@@ -1,0 +1,9 @@
+{
+  "name": "Mini Notes",
+  "tagline": "Local notes with host LLM summaries",
+  "description": "Create, store and summarize notes using Anna storage and an Executa tool.",
+  "category": "productivity",
+  "bundled_executas": {
+    "mini-notes-summarizer": { "path": "executas/mini-notes-summarizer" }
+  }
+}

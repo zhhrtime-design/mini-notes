@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Notes</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__head">
+        <h1>Mini Notes</h1>
+        <span id="conn" class="badge badge--off" role="status">Connecting…</span>
+      </header>
+
+      <form id="note-form" class="composer" autocomplete="off">
+        <label class="sr-only" for="note-input">New note</label>
+        <input id="note-input" name="note" type="text" maxlength="500" placeholder="Write a short note…" />
+        <button id="add-btn" type="submit">Add</button>
+      </form>
+      <p id="form-error" class="field-error" role="alert" hidden></p>
+
+      <section aria-labelledby="notes-h">
+        <div class="section__head">
+          <h2 id="notes-h">Notes <span id="count" class="muted"></span></h2>
+          <button id="reload-btn" type="button" class="btn--ghost">Reload from storage</button>
+        </div>
+        <p id="empty" class="empty" hidden>No notes yet. Add your first one above.</p>
+        <p id="list-error" class="field-error" role="alert" hidden></p>
+        <ol id="notes" class="notes"></ol>
+      </section>
+
+      <section aria-labelledby="sum-h" class="summary">
+        <div class="section__head">
+          <h2 id="sum-h">Summary</h2>
+          <button id="summarize-btn" type="button">Summarize</button>
+        </div>
+        <div id="summary" class="summary__body" aria-live="polite">
+          <p class="muted">Click Summarize to ask the host LLM (via the Executa tool) for a short summary.</p>
+        </div>
+      </section>
+
+      <details class="audit" open>
+        <summary>Host API activity <span id="audit-count" class="muted"></span></summary>
+        <ul id="audit" class="audit__list"></ul>
+      </details>
+    </main>
+    <script src="anna-tool-ids.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

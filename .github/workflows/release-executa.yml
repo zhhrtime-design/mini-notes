@@ -1,0 +1,169 @@
+name: Release Executa binaries
+
+# Publishes the mini-notes-summarizer Executa as GitHub Release assets:
+#   mini-notes-summarizer-darwin-arm64.tar.gz
+#   mini-notes-summarizer-darwin-x86_64.tar.gz
+#   mini-notes-summarizer-windows-x86_64.zip
+#
+# Trigger:
+#   * push a tag:      git tag v0.1.0 && git push origin v0.1.0
+#   * or manually:     Actions -> "Release Executa binaries" -> Run workflow (enter the tag)
+# The tag MUST equal v<contents of executas/mini-notes-summarizer/VERSION>.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish, must equal v<VERSION> (e.g. v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  EXECA_DIR: executas/mini-notes-summarizer
+
+jobs:
+  # ── 1. tag <-> VERSION guard ───────────────────────────────────────
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.t.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: t
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then TAG="$INPUT_TAG"; else TAG="$REF_NAME"; fi
+          VERSION="$(tr -d '[:space:]' < "$EXECA_DIR/VERSION")"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag '$TAG' must equal 'v$VERSION' (from $EXECA_DIR/VERSION). Bump VERSION or fix the tag."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  # ── 2. unit + protocol tests on the source ─────────────────────────
+  test:
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: go vet + go test -race
+        working-directory: ${{ env.EXECA_DIR }}
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+      - name: Protocol test (initialize/describe/invoke + reverse sampling, mock fixture)
+        run: node scripts/protocol-test.mjs
+
+  # ── 3. build + package all three platforms (Go cross-compiles, CGO off) ──
+  build:
+    needs: [resolve, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build + verify archives (darwin-arm64, darwin-x86_64, windows-x86_64)
+        run: python scripts/package_executa.py --all --out dist-executa
+      - name: Upload workflow artifact (auxiliary; the Release assets come from the release job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: executa-archives
+          path: |
+            dist-executa/*.tar.gz
+            dist-executa/*.zip
+            dist-executa/SHA256SUMS
+          if-no-files-found: error
+
+  # ── 4. smoke test each archive on a NATIVE runner for its platform ──
+  smoke:
+    needs: build
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: darwin-arm64
+            os: macos-latest        # Apple Silicon
+            archive: mini-notes-summarizer-darwin-arm64.tar.gz
+            exe: extracted/bin/mini-notes-summarizer
+          - platform: darwin-x86_64
+            os: macos-15-intel      # Intel (macos-13 was retired; update this label if GitHub rotates runners)
+            archive: mini-notes-summarizer-darwin-x86_64.tar.gz
+            exe: extracted/bin/mini-notes-summarizer
+          - platform: windows-x86_64
+            os: windows-latest
+            archive: mini-notes-summarizer-windows-x86_64.zip
+            exe: extracted/bin/mini-notes-summarizer.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: executa-archives
+          path: dist-executa
+      - name: Verify archive layout + root manifest.json
+        run: python scripts/package_executa.py --verify dist-executa/${{ matrix.archive }}
+      - name: Extract (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: mkdir extracted && tar -xzf "dist-executa/${{ matrix.archive }}" -C extracted
+      - name: Extract (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Expand-Archive -Path "dist-executa/${{ matrix.archive }}" -DestinationPath extracted
+      - name: Smoke test — describe + initialize + invoke with reverse sampling (mock host)
+        shell: bash
+        run: node scripts/protocol-test.mjs --exe "${{ matrix.exe }}"
+
+  # ── 5. one job uploads ALL THREE assets to the GitHub Release ───────
+  release:
+    needs: [resolve, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: executa-archives
+          path: dist-executa
+      - name: Show what will be published
+        run: |
+          ls -l dist-executa
+          echo "### SHA-256" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat dist-executa/SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Create/Update GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist-executa/mini-notes-summarizer-darwin-arm64.tar.gz
+            dist-executa/mini-notes-summarizer-darwin-x86_64.tar.gz
+            dist-executa/mini-notes-summarizer-windows-x86_64.zip

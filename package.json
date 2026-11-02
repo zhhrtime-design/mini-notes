@@ -1,0 +1,30 @@
+{
+  "name": "anna-mini-notes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mini Notes with LLM Summary — an Anna App (storage Host API + Executa tool using reverse sampling).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "node scripts/test.mjs",
+    "check:consistency": "node scripts/check-consistency.mjs",
+    "validate": "anna-app validate --strict",
+    "dev": "anna-app dev --no-llm",
+    "dev:full": "anna-app dev",
+    "executa:dev:mock": "anna-app executa dev --dir executas/mini-notes-summarizer --mock-sampling executas/mini-notes-summarizer/fixtures/sampling.jsonl",
+    "test:executa": "cd executas/mini-notes-summarizer && go vet ./... && go test -race -count=1 ./...",
+    "test:protocol": "node scripts/protocol-test.mjs",
+    "package:executa": "python3 scripts/package_executa.py",
+    "package:executa:all": "python3 scripts/package_executa.py --all",
+    "test:e2e": "node scripts/e2e-ui.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.3"
+  }
+}
